@@ -1,16 +1,16 @@
 from config import *
 
 
-def make_tree(node_string, href):
+def make_tree(node_string, href, vercode):
     root ={}
     rnode = node_string.split('/')[0]
     cnode = '/'.join(node_string.split('/')[1:])
     root['text'] = rnode
     href = href + '/' + rnode
     if len(cnode) > 0:
-        root['nodes'] = make_tree(cnode, href)
+        root['nodes'] = make_tree(cnode, href, vercode)
     else:
-        root['href'] = host + 'filediff?fname=' + href
+        root['href'] = host + 'filediff?fname=' + href + '&vercode=' + vercode
     return [root]
 
 
@@ -31,14 +31,14 @@ def map_tree(root, node):
     return root
 
 
-def make_diff_tree(treedata, appname):
+def make_diff_tree(treedata, appname, vercode):
 
     keys = treedata.keys()
     keys.sort()
     out = []
 
     for node_string in keys:
-        tree_node = make_tree(node_string[1:], appname)
+        tree_node = make_tree(node_string[1:], appname,vercode)
         out = map_tree(out, tree_node[0])
     # out = [
     #     {"text": "Parent 1",

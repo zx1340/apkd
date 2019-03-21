@@ -108,6 +108,13 @@ def cmd_get_output(cmd):
 	return result[:-1]
 
 
+#TODO: ....
+def diff_output(cmd):
+	os.chdir('../')
+	output = cmd_get_output(cmd)
+	os.chdir('apkdb')
+	return output
+
 def make_smali_code(process_name,app_version):
 	logger.info("Making smali code "+ process_name + "|"+app_version)
 
@@ -136,6 +143,7 @@ def current_time():
 	return str(time.time())
 
 
+
 def unpack_apk(appname):
 	os.system('apktool -f -s d %s.apk'%appname)
 	appversion = get_app_version(appname)
@@ -145,6 +153,18 @@ def unpack_apk(appname):
 
 
 def render_file(filename):
+	logger.info("Return file data {}".format(filename))
 	with open(filename,'r') as f:
 		data = f.read()
 	return data
+
+def get_diff_version(appver,checkver):
+	try:
+		check_ver_index = appver.index(checkver)
+	except:
+		return "ERROR cannot get this version code"
+	logger.info("Get versionindex"+ str(check_ver_index))
+	if len(appver) > check_ver_index + 1:
+		return checkver,appver[check_ver_index+1]
+	return "ERROR This is oldest version"
+

@@ -17,10 +17,9 @@ space = '&emsp;'
 try:
 	out=cmd_get_output('apktool')
 except:
-	print "ERROR,PLS install apktool"
+	print "apktool not found"
 	import sys
 	sys.exit()
-
 
 
 @login_manager.user_loader
@@ -115,23 +114,28 @@ def filediff():
 
 	appvers.sort(reverse=True)
 	logger.info("Sorted appver %s" % appvers)
-	l1, l2 = appvers[0], appvers[1]
+	check_ver = request.args.get('vercode')
+
+	if not check_ver:
+		l1, l2 = appvers[0], appvers[1]
+	else:
+		l1, l2 = get_diff_version(appvers,check_ver)
+		logger.info("Get diff data with version code {} {}".format(l1,l2))
+
 	l1_location = '{}/{}/smali_code/{}'.format(package_location, l1, filename)
 	l2_location = '{}/{}/smali_code/{}'.format(package_location, l2, filename)
-
 	logger.info(l1_location)
 
-	if not file_exist(l1_location):
-		if file_exist(l2_location):
-			return render_file(l2_location)
-		else:
-			return "File not exist, report pls"
-
-	if not file_exist(l2_location):
-		return render_file(l1_location)
-
-	ret = cmd_get_output('git diff {} {}'.format(l1_location, l2_location))
-	return ret
+	if not file_exist(l1_location) and not file_exist(l2_location):
+		logger.error("Something go wrong :(")
+	elif file_exist(l1_location) and file_exist(l2_location):
+		return diff_output('git diff apkdb/{} apkdb/{}'.format(l1_location, l2_location))
+	elif file_exist(l1_location) and not file_exist(l2_location):
+		return diff_output('git diff apkdb/{} /dev/null'.format(l1_location))
+	elif not file_exist(l1_location) and file_exist(l2_location):
+		return diff_output('git diff /dev/null apkdb/{}'.format(l2_location))
+	else:
+		pass
 
 
 @app.route('/diff/<name>')
@@ -141,15 +145,26 @@ def test(name):
 	appvers.sort(reverse=True)
 	logger.info("Sorted appver %s" % appvers)
 	location = 'project/{}'.format(name)
-	l1, l2 = appvers[0], appvers[1]
-	# TODO: local file read
+
+	check_ver = request.args.get('vercode')
+	if not check_ver:
+		l1, l2 = appvers[0], appvers[1]
+	else:
+		logger.info("request diff with versioncode" +check_ver)
+		l1, l2 = get_diff_version(appvers,check_ver)
+
+	logger.info("Cheking 2 different version {} {}".format(l1,l2))
 	diff_file = '{}/{}/{}_{}'.format(location, l1, l1, l2)
+	logger.info("Make diff file {}".format(diff_file))
 	if file_exist(diff_file):
+		logger.info("Diff file exits")
 		with open(diff_file, 'r') as r:
 			ret = r.read()
 	else:
-		ret = cmd_get_output('git diff --name-status {}/{} {}/{}'.format(location, l1, location, l2))
-		# save this file for next using
+		#list of different file
+		#TODO: cannot call gif diff with .git folder....
+		logger.info("Diff file not exist, creating")
+		ret = diff_output('git diff --name-status apkdb/{}/{} apkdb/{}/{}'.format(location, l1, location, l2))
 		with open(diff_file, 'w') as w:
 			w.write(ret)
 	allfile = {}
@@ -161,7 +176,7 @@ def test(name):
 			allfile[k[1].split('smali_code')[1]] = k[0]
 		except:
 			allfile[k[1]] = k[0]
-	tree = make_diff_tree(allfile, name)
+	tree = make_diff_tree(allfile, name, l1)
 	return render_template("diff.html", tree=tree)
 
 if __name__ == '__main__':
