@@ -2,23 +2,26 @@ from utils import *
 from flask import Flask, request, render_template
 from maketree import make_diff_tree
 from threading import Thread
-
-
 from config import *
-
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin
-
 import os
 
 app = Flask(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = ''
-
 app.config['SECRET_KEY'] = secret_key
 
 down = '</br>'
 space = '&emsp;'
+try:
+	out=cmd_get_output('apktool')
+except:
+	print "ERROR,PLS install apktool"
+	import sys
+	sys.exit()
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -69,12 +72,15 @@ def logout():
 @app.route('/up', methods=['GET', 'POST'])
 def upload_file():
 	if request.method == 'POST':
-		print "Request data", request.files['uploaded_file']
-		file = request.files['uploaded_file']
-		file.save(file.filename + '.apk')
-		thread = Thread(target=unpack_apk, args=(file.filename,))
-		thread.start()
-		return "ok"
+		print request.form['key']
+		if request.form['key'] == android_secret:
+			print "Request data", request.files['uploaded_file']
+			file = request.files['uploaded_file']
+			file.save(file.filename + '.apk')
+			thread = Thread(target=unpack_apk, args=(file.filename,))
+			thread.start()
+			return "ok"
+		return "Android secret key mismatch"
 
 
 @app.route('/ver', methods=['GET'])
