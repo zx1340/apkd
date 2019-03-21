@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Data Table</title>
+  
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">  
+
+  
+</head>
+
+<body>
+
+  <html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>Table Style</title>
+	<meta name="viewport" content="initial-scale=1.0; maximum-scale=1.0; width=device-width;">
+</head>
+
+<body>
+
+<div class="table-title">
+	<h3>Android app</h3>
+</div>
+
+
+<div class="container">
+<table>
+	<thead>
+	<tr>
+		<th class="text-left">App name</th>
+		<th class="text-left">Version</th>
+	</tr>
+	</thead>
+<tbody>
+
+{% for key, value in applist.iteritems() %}
+<tr>
+	<td class="text-left">
+		<a href="diff/{{key}}">{{ key }}</a>
+	</td>
+	<td class="text-left">{{ value }}</td>
+</tr>
+
+{% endfor %}
+</tbody>
+</table>
+  
+
+  </body>
+  
+  
+
+</body>
+
+</html>
