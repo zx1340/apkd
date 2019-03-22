@@ -36,12 +36,16 @@
 	</thead>
 <tbody>
 
-{% for key, value in applist.iteritems() %}
+{% for key, values in applist.iteritems() %}
 <tr>
 	<td class="text-left">
 		<a href="diff/{{key}}">{{ key }}</a>
 	</td>
-	<td class="text-left">{{ value }}</td>
+	{% for value in values %}
+		<td class="text-left">
+			<a href="diff/{{key}}?vercode={{value}}">{{ value }}</a>
+		</td>
+	{% endfor %}
 </tr>
 
 {% endfor %}

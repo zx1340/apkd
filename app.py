@@ -1,10 +1,11 @@
 from utils import *
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from maketree import make_diff_tree
 from threading import Thread
 from config import *
-from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin
+from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 import os
+import sys
 
 app = Flask(__name__)
 login_manager = LoginManager()
@@ -14,12 +15,14 @@ app.config['SECRET_KEY'] = secret_key
 
 down = '</br>'
 space = '&emsp;'
+
+#do we have apktool?
 try:
 	out=cmd_get_output('apktool')
 except:
 	print "apktool not found"
-	import sys
 	sys.exit()
+
 
 
 @login_manager.user_loader
@@ -34,6 +37,8 @@ class User(UserMixin):
 
 @app.route('/')
 def home():
+	if current_user.is_authenticated:
+		return redirect('/app', code=302)
 	return "home: <a href='/login'>Login</a> <a href='/app'>App</a> <a href='/logout'>Logout</a>"
 
 
@@ -57,7 +62,7 @@ def protected():
 	prjname = os.listdir('project')
 	for name in prjname:
 		logger.info("Check name:" + name)
-		applist[name] = " ".join(os.listdir('project/%s/'%name))
+		applist[name] = os.listdir('project/{}/'.format(name))
 	return render_template('index.html', applist=applist)
 
 
@@ -71,9 +76,8 @@ def logout():
 @app.route('/up', methods=['GET', 'POST'])
 def upload_file():
 	if request.method == 'POST':
-		print request.form['key']
+		#TODO: Android app handle response
 		if request.form['key'] == android_secret:
-			print "Request data", request.files['uploaded_file']
 			file = request.files['uploaded_file']
 			file.save(file.filename + '.apk')
 			thread = Thread(target=unpack_apk, args=(file.filename,))
@@ -82,6 +86,7 @@ def upload_file():
 		return "Android secret key mismatch"
 
 
+#get version code ver?app=com.example
 @app.route('/ver', methods=['GET'])
 def app_vercode():
 	appname = request.args.get('app')
@@ -93,7 +98,6 @@ def app_vercode():
 			return "0"
 	else:
 		return ""
-
 
 @app.route('/filediff', methods=['GET'])
 @login_required
