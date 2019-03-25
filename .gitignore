@@ -1,2 +1,4 @@
 project
 .vscode/launch.json
+.pyc
+config.py
