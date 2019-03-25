@@ -4,6 +4,7 @@ import subprocess
 import glob
 import time
 import re
+from config import *
 
 logging.basicConfig(level=logging.INFO)
 logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
@@ -30,6 +31,7 @@ def get_app_version(location):
 	with open('%s/AndroidManifest.xml'%location,'r') as f:
 		data = f.read()
 	return re.findall(r'platformBuildVersionCode=\"(\d+)',data)[0]
+
 
 
 # get appversion by app name
@@ -60,12 +62,65 @@ def project_exist(app_name):
 	return app_version
 
 
+# def parse_line_change(data):
+# 	filedatas = data.split('../')
+# 	ret = {}
+# 	for filedata in filedatas:
+# 		if len(filedata): 
+# 			filelocation = filedata.split(' ')[0]
+# 			finsertion = re.findall(r'(\d+) insertions',filedata)[0] if 'insertions' in filedata else 0
+# 			fdeleteion = re.findall(r'(\d+) deletions',filedata)[0] if 'deletions' in filedata else 0
+# 			ret[filelocation] = [finsertion,fdeleteion]
+# 	return ret
+
+def create_diff_file(app_name,app_version):
+	location = 'project/{}'.format(app_name)
+	appvers = os.listdir(location)
+	if len(appvers) > 1:
+
+		#File change
+		appvers.sort(reverse=True)
+		l1, l2 = appvers[0], appvers[1]
+		diff_file = '{}/{}/{}_{}'.format(location, l1, l1, l2)
+		ret = diff_output('git diff --name-status --no-renames apkdb/{}/{}/smali_code/ apkdb/{}/{}/smali_code'.format(location, l1, location, l2))
+		with open(diff_file, 'w') as w:
+			w.write(ret)
+		#number of line change
+		r = ret.split('\n')
+		line_change = {}
+		for df in r:
+			fname = df.split('smali_code/')[1]
+			tchange = df.split('\t')[0]
+			f1_location = 'apkdb/{}/{}/smali_code/{}'.format(location,l1,fname)
+			f2_location = 'apkdb/{}/{}/smali_code/{}'.format(location,l2,fname)
+
+			if tchange == 'M':
+				line_change[fname] = get_line_change(diff_output('git diff --stat {} {}'.format(f1_location,f2_location)))
+			elif tchange == 'D':
+				line_change[fname] = get_line_change(diff_output('git diff --stat {} {}'.format(f1_location,'/dev/null')))
+			elif tchange == 'A':
+				line_change[fname] = get_line_change(diff_output('git diff --stat {} {}'.format('/dev/null',f2_location)))
+		
+		# line_change = parse_line_change(line_change)
+		with open(diff_file + '_line','w') as fw:
+			fw.write(str(line_change))
+
+	else:
+		logger.info("Project contain 1 version")
+
+def get_line_change(filedata):
+	finsertion = re.findall(r'(\d+) insertions',filedata)[0] if 'insertions' in filedata else 0
+	fdeleteion = re.findall(r'(\d+) deletions',filedata)[0] if 'deletions' in filedata else 0
+	return [finsertion,fdeleteion]
+
+
 
 def create_project(app_name,app_version):
 	logger.info('Create project folder: project/%s/%s'%(app_name,app_version))
 	os.mkdir('project/%s/%s'%(app_name,app_version))
 	os.system('mv %s.apk project/%s/%s/'%(app_name,app_name,app_version))
 	make_smali_code(app_name,app_version)
+	create_diff_file(app_name,app_version)
 	#decompile(app_name,app_version)
 
 
@@ -100,7 +155,7 @@ def which(program):
 
 
 def cmd_get_output(cmd):
-	logger.info("CMD:"+cmd)
+	# logger.info("CMD:"+cmd)
 	process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr= subprocess.PIPE)
 	result,error = process.communicate()
 	if error:
@@ -168,3 +223,9 @@ def get_diff_version(appver,checkver):
 		return checkver,appver[check_ver_index+1]
 	return "ERROR This is oldest version"
 
+
+def in_black_list(data):
+	for b in black_list:
+		if data.startswith(b):
+			return True
+	return False

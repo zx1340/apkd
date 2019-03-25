@@ -56,13 +56,8 @@ def make_diff_tree(treedata, appname, vercode):
     return out
 
 
-    
-
-
-
-
-
-
-
-
-
+def simple_tree(tree_data,appname,vercode):
+    ret = []
+    for data in tree_data:
+        ret.append({'text':data,'href':host + 'filediff?fname='+ appname+'/'+ data + '&vercode=' + vercode })
+    return ret

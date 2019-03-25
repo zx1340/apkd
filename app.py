@@ -1,11 +1,13 @@
 from utils import *
 from flask import Flask, request, render_template, redirect
-from maketree import make_diff_tree
+from maketree import *
 from threading import Thread
 from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 import os
 import sys
+import ast
+
 
 app = Flask(__name__)
 login_manager = LoginManager()
@@ -142,9 +144,10 @@ def filediff():
 		pass
 
 
-@app.route('/diff/<name>')
+@app.route('/core_diff/<name>')
 @login_required
-def test(name):
+def app_diff(name):
+	
 	appvers = os.listdir('project/{}/'.format(name))
 	appvers.sort(reverse=True)
 	logger.info("Sorted appver %s" % appvers)
@@ -165,12 +168,8 @@ def test(name):
 		with open(diff_file, 'r') as r:
 			ret = r.read()
 	else:
-		#list of different file
-		#TODO: cannot call gif diff with .git folder....
-		logger.info("Diff file not exist, creating")
-		ret = diff_output('git diff --name-status apkdb/{}/{} apkdb/{}/{}'.format(location, l1, location, l2))
-		with open(diff_file, 'w') as w:
-			w.write(ret)
+		logger.error("File not found")
+
 	allfile = {}
 	x = ret.split('\n')
 	for i in x[1:]:
@@ -181,6 +180,37 @@ def test(name):
 		except:
 			allfile[k[1]] = k[0]
 	tree = make_diff_tree(allfile, name, l1)
+	return render_template("diff.html", tree=tree)
+
+@app.route('/diff/<name>')
+@login_required
+def main_diff(name):
+	appvers = os.listdir('project/{}/'.format(name))
+	appvers.sort(reverse=True)
+	logger.info("Sorted appver %s" % appvers)
+	location = 'project/{}'.format(name)
+
+	check_ver = request.args.get('vercode')
+	if not check_ver:
+		l1, l2 = appvers[0], appvers[1]
+	else:
+		logger.info("request diff with versioncode" +check_ver)
+		l1, l2 = get_diff_version(appvers,check_ver)
+
+	diff_file = '{}/{}/{}_{}_line'.format(location, l1, l1, l2)
+	logger.info("DIFFFILE"+ diff_file)
+	with open(diff_file,'r') as f:
+		data = f.read()
+	diff_data = ast.literal_eval(data)
+	# print diff_data
+	choose_one = []
+	for keys,values in sorted(diff_data.items()):
+		if values[0]!= values[1]:
+			if not in_black_list(keys):
+				choose_one.append(keys)
+
+	tree = simple_tree(choose_one,name,l1)
+
 	return render_template("diff.html", tree=tree)
 
 if __name__ == '__main__':
